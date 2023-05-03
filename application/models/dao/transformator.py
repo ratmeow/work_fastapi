@@ -1,13 +1,137 @@
-from sqlalchemy import Column, ForeignKey, Boolean, Integer, Numeric, String, Text, DateTime, Float
+from sqlalchemy import Column, ForeignKey, Boolean, Integer, Numeric, String, Text, DateTime, Float, Enum, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+import enum
+from geoalchemy2 import Geometry
 from sqlalchemy.orm import relationship
 from datetime import datetime
+
 
 
 #Объявление декларативного (описательного) метода представления БД
 Base = declarative_base()
 #ахах
+
+
+class Type(enum.Enum):
+    d2seism = '2dseism'
+    d3seism = '3dseism'
+    grid = 'grid'
+    map = 'map'
+    horizon = 'horizon'
+    whell = 'whell'
+    whellbore = 'whellbore'
+    inclinometry = 'inclinometry'
+    gis = 'gis'
+    marker = 'marker'
+    signal = 'signal'
+    library = 'library'
+
+
+class Relation(enum.Enum):
+    copy = 'copy'
+    include = 'include'
+    link = 'link'
+
+
+class Object(Base):
+    __tablename__ = 'objects'
+
+    uuid = Column(String, primary_key=True)
+    created_by = Column(String, ForeignKey('users.uuid'))
+    project_uuid = Column(String, ForeignKey('projects.uuid'))
+    object_type = Column(Enum(Type))
+    props = Column(JSON)
+    source = Column(JSON)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+    geometries = relationship("Geometries", back_populates="object")
+    grids = relationship("Grids", back_populates="object")
+    surfaces = relationship("Surfaces", back_populates="object")
+    well_data = relationship("WellData", back_populates="object")
+    markers = relationship("Markers", back_populates="object")
+    signals = relationship("Signals", back_populates="object")
+
+
+class RelationObjects(Base):
+    tablename = 'RelationObjects'
+
+    parent_uuid = Column(ForeignKey('Objects.uuid'))
+    child_uuid = Column(ForeignKey('Objects.uuid'))
+    relation_type = Column(Enum(Relation.Enum))
+
+class Geometries(Base):
+    tablename = 'Geometries'
+
+    id = Column(Integer, primary_key=True)
+    geom = Column('geometry', String)
+    object_uuid = Column(ForeignKey('Objects.uuid'), index=True)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+class Grids(Base):
+    tablename = 'Grids'
+
+    id = Column(Integer, primary_key=True)
+    geometry_id = Column(ForeignKey('Geometries.id'))
+    object_uuid = Column(ForeignKey('Objects.uuid'))
+    inline = Column(Integer)
+    xline = Column(Integer)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+class Surfaces(Base):
+    tablename = 'Surfaces'
+
+    id = Column(Integer, primary_key=True)
+    grid_id = Column(ForeignKey('Grids.id'))
+    object_uuid = Column(ForeignKey('Objects.uuid'))
+    value = Column(Float)
+    level = Column(Integer)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+
+class WellData(Base):
+    tablename = 'WellData'
+
+    id = Column(Integer, primary_key=True)
+    geometry_id = Column(ForeignKey('Geometries.id'))
+    object_uuid = Column(ForeignKey('Objects.uuid'))
+    value = Column(Float)
+    dm = Column(Float)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+
+class Markers(Base):
+    tablename = 'Markers'
+
+    id = Column(Integer, primary_key=True)
+    well_data_id = Column(ForeignKey('WellData.id'))
+    object_uuid = Column(ForeignKey('Objects.uuid'))
+    name = Column(String)
+    dm = Column(Float)
+
+
+class Signals(Base):
+    tablename = 'Signals'
+
+    id = Column(Integer, primary_key=True)
+    object_uuid = Column(ForeignKey('Objects.uuid'))
+    value = Column(Float)
+
+
+
+
+
+
+
+
+
 
 class Transformator(Base):
     """ Таблица с наименованиями населённых пунктов """
