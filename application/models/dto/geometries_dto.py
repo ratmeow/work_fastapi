@@ -1,8 +1,9 @@
-import uuid
+from uuid import UUID
+from geoalchemy2 import Geometry
 from pydantic import BaseModel
 
 
 class GeometriesDTO(BaseModel):
-    uuid = uuid
-    geom = geometry
-    object_uuid = uuid
+    uuid = UUID
+    geom = Geometry
+    object_uuid = UUID

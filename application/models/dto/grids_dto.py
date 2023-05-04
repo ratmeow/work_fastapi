@@ -1,10 +1,10 @@
-import uuid
+from uuid import UUID
 from pydantic import BaseModel
 
 
 class GridsDTO(BaseModel):
-    uuid = uuid
-    geometry_uuid = uuid
-    object_uuid = uuid
+    uuid = UUID
+    geometry_uuid = UUID
+    object_uuid = UUID
     inline = int
     xline = int

@@ -1,10 +1,10 @@
-import uuid
+from uuid import UUID
 from pydantic import BaseModel
 
 
 class MarkersDTO(BaseModel):
     id = int
-    well_data_uuid = uuid
-    object_uuid = uuid
+    well_data_uuid = UUID
+    object_uuid = UUID
     name = str
     dm = float

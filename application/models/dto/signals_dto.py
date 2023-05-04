@@ -1,8 +1,8 @@
-import uuid
+from uuid import UUID
 from pydantic import BaseModel
 
 
 class SignalsDTO(BaseModel):
     id = int
-    object_uuid = uuid
+    object_uuid = UUID
     value = float

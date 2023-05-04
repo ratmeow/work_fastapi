@@ -1,12 +1,7 @@
-import uuid
-import json
-
+from uuid import UUID
+from enum_classes import Types
 from pydantic import BaseModel
-from typing import (
-    Deque, Dict, List, Optional, Sequence, Set, Tuple, Union
-)
 
-from datetime import datetime
 
 
 class ObjectsDTO(BaseModel):
@@ -14,11 +9,11 @@ class ObjectsDTO(BaseModel):
         Если данные, передаваемые клиенту сильно отличаются от данных,
         которые принимает REST API сервера, необходимо разделять DTO
         для запросов и ответов """
-    # uuid: uuid
-    created_by: uuid
-    project_uuid: uuid
-    object_type: types
-    props: json
-    source: json
+    # uuid: UUID
+    created_by: UUID
+    project_uuid: UUID
+    object_type: Types
+    props: dict
+    source: dict
 
 
