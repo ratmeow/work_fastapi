@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Request, Response
 from starlette.responses import RedirectResponse
 from application.models.dto.objects_dto import ObjectsDTO
-# from application.services.controller import *
+from application.services.controller import ObjectController
 
 """
 
@@ -11,7 +11,7 @@ from application.models.dto.objects_dto import ObjectsDTO
 
 
 router = APIRouter( tags=['Transformator Forecast API'])       # подключаем данный роутер к корневому адресу /api
-# service = TransformatorService()              # подключаем слой с дополнительной бизнес-логикой
+controller = ObjectController()              # подключаем слой с дополнительной бизнес-логикой
 
 @router.get('/')
 async def root():
@@ -22,9 +22,8 @@ async def root():
 
 @router.post('/objects')
 def create_object(obj: ObjectsDTO):
-    print(obj)
-    # obj = controller.create_object(obj)
-    # return obj
+    obj = controller.create_object(obj)
+    return obj
 #
 # @router.get('/transformator/{city_name}', response_model=List[TransformatorDTO])
 # async def get_all_transforecast_by_city_name(city_name: str):

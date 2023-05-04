@@ -1,11 +1,12 @@
-from application.services.repository import *
+from application.services.repository import ObjectDAO
+from application.models.dto.objects_dto import ObjectsDTO
 from application.session import SessionLocal
 #перед отправление в репозиторий превратить в DAO
 class ObjectService:
-    def __init__(self, repo: ObjectRepository):
-        self.repo = repo
-
-    def create_object(self, uuid, object_type, props):
+    def __init__(self):
         with SessionLocal as session:
-            obj = self.repo.create(uuid, object_type, props)
+            self.dao = ObjectDAO(session)
+
+    def create_object(self, obj: ObjectsDTO):
+        obj = self.dao.create(obj.object_type, obj.created_by)
         return obj
