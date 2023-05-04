@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import functools
 import traceback
 
-from application.models.dao.transformator import Transformator, City, Types
+from application.models.dao.data import *
 
 
 def dbexception(db_func):
@@ -20,80 +20,117 @@ def dbexception(db_func):
             return False
     return decorated_func
 
-
-def get_transformator_by_number(db: Session, transformator_number: int) -> Optional[Transformator]:
-    result = db.query(Transformator).filter(Transformator.number == transformator_number).first()
-    return result
-
-
-def get_trans_by_city_name(db: Session, city_name: str) -> Iterable[Transformator]:
-    result = db.query(Transformator).join(City).filter(City.name == city_name).all()
-    return result
-
-#ахах
-def create_transformator(db: Session, number: int, hydrogen: int, oxygen: int, nitrogen: int, methane: int, co: int, co_2: int,
-                         ethylene: int, ethane: int, acethylene: int, dbds: int, power_factor: float, interfacial_v: int,
-                         dielectric_rigidity: int, water_content: int, city_id: int, types: int,
-                         health_index: float) -> bool:
-    transformator = Transformator(
-        number=number,
-        hydrogen=hydrogen,
-        oxygen=oxygen,
-        nitrogen=nitrogen,
-        methane=methane,
-        co=co,
-        co_2=co_2,
-        ethylene=ethylene,
-        ethane=ethane,
-        acethylene=acethylene,
-        dbds=dbds,
-        power_factor=power_factor,
-        interfacial_v=interfacial_v,
-        dielectric_rigidity=dielectric_rigidity,
-        water_content=water_content,
-        city=city_id,
-        types=types,
-        health_index=health_index
+@dbexception
+def add_data(db: Session) -> bool:
+    obj1 = Objects(
+        uuid=uuid.uuid4(),
+        object_type=Types.d2seism,
+        props={'prop1': 10, 'prop2': 'test'},
+        source={'source1': 1, 'source2': 'test'},
+        created_by=uuid.uuid4(),
+        project_uuid=uuid.uuid4()
     )
-    return add_transformator(db, transformator)
+    db.add(obj1)
 
+    obj2 = Objects(
+        uuid=uuid.uuid4(),
+        object_type=Types.gis,
+        props={'prop3': 20, 'prop4': 'test2'},
+        source={'source3': 2, 'source4': 'test2'},
+        created_by=uuid.uuid4(),
+        project_uuid=uuid.uuid4()
+    )
+    db.add(obj2)
 
-def add_transformator(db: Session, transformator: Transformator) -> bool:
-    try:
-        db.add(transformator)
-        db.commit()
-    except Exception as ex:
-        print(traceback.format_exc())
-        db.rollback()
-        return False
+    db.commit()
+
+    # добавление связи между объектами
+    rel_obj1_obj2 = RelationObjects(
+        parent_uuid=obj1.uuid,
+        child_uuid=obj2.uuid,
+        relation_type=Relation.link
+    )
+    db.add(rel_obj1_obj2)
+
+    # добавление геометрий
+    geom1 = Geometries(
+        uuid=uuid.uuid4(),
+        geom='POINT(1 2)',
+        object_uuid=obj1.uuid
+    )
+    db.add(geom1)
+
+    geom2 = Geometries(
+        uuid=uuid.uuid4(),
+        geom='POINT(3 4)',
+        object_uuid=obj2.uuid
+    )
+    db.add(geom2)
+
+    # добавление сеток
+    grid1 = Grids(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom1.uuid,
+        object_uuid=obj1.uuid,
+        inline=1,
+        xline=2
+    )
+    db.add(grid1)
+
+    grid2 = Grids(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom2.uuid,
+        object_uuid=obj2.uuid,
+        inline=3,
+        xline=4
+    )
+    db.add(grid2)
+
+    # добавление поверхностей
+    surf1 = Surfaces(
+        grid_uuid=grid1.uuid,
+        object_uuid=obj1.uuid,
+        value=10.0,
+        level=1
+    )
+    db.add(surf1)
+
+    surf2 = Surfaces(
+        grid_uuid=grid2.uuid,
+        object_uuid=obj2.uuid,
+        value=20.0,
+        level=2
+    )
+    db.add(surf2)
+
+    # добавление данных скважин
+    well_data1 = WellData(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom1.uuid,
+        object_uuid=obj1.uuid,
+        value=30.0,
+        dm=1.0
+    )
+    db.add(well_data1)
+
+    well_data2 = WellData(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom2.uuid,
+        object_uuid=obj2.uuid,
+        value=40.0,
+        dm=1.0
+    )
+    db.add(well_data2)
+
+    db.commit()
+
+    marker1 = Markers(well_data_uuid=well_data1.uuid, object_uuid=obj1.uuid, name='marker_1', dm=100.0)
+    marker2 = Markers(well_data_uuid=well_data2.uuid, object_uuid=obj2.uuid, name='marker_2', dm=200.0)
+    db.add_all([marker1, marker2])
+
+    # создаем записи в таблице signals
+    signal1 = Signals(object_uuid=obj1.uuid, value=1.0)
+    signal2 = Signals(object_uuid=obj2.uuid, value=2.0)
+    db.add_all([signal1, signal2])
     return True
 
-
-def update_hydrogen_by_transformator_number(db: Session, transformator_number: int, hydrogen: int) -> bool:
-    transformator = get_transformator_by_number(db, transformator_number)
-    transformator.hydrogen = hydrogen
-    return add_transformator(db, transformator)
-
-
-# def get_transformator_by_city_id(db: Session, city_id: int) -> Optional[Transformator]:
-#     result = db.query(Transformator).filter(Transformator.city == city_id).order_by(Transformator.updated_on.asc()).first()
-#     return result
-
-
-@dbexception
-def delete_transformator_by_number(db: Session, transformator_number: int) -> bool:
-    trans = get_transformator_by_number(db, transformator_number)
-    db.delete(trans)
-
-
-@dbexception
-def add_city(db: Session, city_name: str) -> bool:
-    city = City(name=city_name)
-    db.add(city)
-    return True
-
-
-@dbexception
-def add_type(db: Session, transformator_type: int) -> None:
-    trans_type = Types(name=transformator_type)
-    db.add(trans_type)
