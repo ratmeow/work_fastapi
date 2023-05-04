@@ -1,6 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel
-from enum_classes import Relation
+from application.models.dto.enum_classes import Relation
 
 
 class RelationObjectsDTO(BaseModel):

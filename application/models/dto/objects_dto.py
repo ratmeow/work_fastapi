@@ -1,5 +1,5 @@
 from uuid import UUID
-from enum_classes import Types
+from application.models.dto.enum_classes import Types
 from pydantic import BaseModel
 
 
