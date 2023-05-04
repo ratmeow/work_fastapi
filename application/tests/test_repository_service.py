@@ -1,88 +1,136 @@
-import unittest
-import random as rnd
-from application.config import SessionLocal
-from application.services.repository_service import *
+from typing import Optional, Iterable
+from sqlalchemy.orm import Session
+import functools
+import traceback
+
+from application.models.dao.models import *
 
 
-"""
-   Данный модуль реализует "тестовые случаи/ситуации" для модуля repository_service.
-   Для создания "тестового случая" необходимо создать отдельный класс, который наследует 
-   базовый класс TestCase. Класс TestCase предоставляется встроенным 
-   в Python модулем для тестирования - unittest.
-   
-   Более детально см.: https://pythonworld.ru/moduli/modul-unittest.html
-"""
-
-
-CITY = []
-
-TYPE = []
-
-
-class TestWeatherRepositoryService(unittest.TestCase):
-    """ Все тестовые методы в классе TestCase (по соглашению)
-        должны начинаться с префикса test_* """
-
-    def setUp(self):
-        """ Наследуемый метод setUp определяет инструкции,
-            которые должны быть выполнены ПЕРЕД тестированием """
-        self.session = SessionLocal()       # создаем сессию подключения к БД
+def dbexception(db_func):
+    @functools.wraps(db_func)
+    def decorated_func(db: Session, *args, **kwargs) -> bool:
         try:
-            for city_name in CITY:
-                add_city(self.session, city_name)
-            for type_name in TYPE:
-                add_type(self.session, type_name)
-        except:
-            print('Test data already created')
+            db_func(db, *args, **kwargs)    # вызов основной ("оборачиваемой") функции
+            db.commit()     # подтверждение изменений в БД
+            return True
+        except Exception as ex:
+            # выводим исключение и "откатываем" изменения
+            print(f'Exception in {db_func.__name__}: {traceback.format_exc()}')
+            db.rollback()
+            return False
+    return decorated_func
 
-    def test_create_weather(self):
-        """ Тест функции создания записи Weather """
-        result = create_transformator(self.session,
-                                      number=rnd.randint(1, 1000),
-                                      hydrogen=rnd.randint(1, 100),
-                                      oxygen=rnd.randint(1, 100),
-                                      nitrogen=rnd.randint(1, 100),
-                                      methane=rnd.randint(1, 100),
-                                      co=rnd.randint(1, 100),
-                                      co_2=rnd.randint(1, 100),
-                                      ethylene=rnd.randint(1, 100),
-                                      ethane=rnd.randint(1, 100),
-                                      acethylene=rnd.randint(1, 100),
-                                      dbds=rnd.randint(1, 100),
-                                      power_factor=1.0,
-                                      interfacial_v=rnd.randint(1, 100),
-                                      dielectric_rigidity=rnd.randint(1, 100),
-                                      water_content=rnd.randint(1, 100),
-                                      city_id=rnd.randint(1, 6),
-                                      types=rnd.randint(1, 6),
-                                      health_index=1.0)
-        self.assertTrue(result)     # валидируем результат (result == True)
+@dbexception
+def add_data(db: Session) -> bool:
+    obj1 = Objects(
+        uuid=uuid.uuid4(),
+        object_type=Types.d2seism,
+        props={'prop1': 10, 'prop2': 'test'},
+        source={'source1': 1, 'source2': 'test'},
+        created_by=uuid.uuid4(),
+        project_uuid=uuid.uuid4()
+    )
+    db.add(obj1)
 
-    def test_get_transformator(self):
-        """ Тест функции поиска записи Weather по наименованию населённого пункта """
-        trans_in_ufa_rows = get_trans_by_city_name(self.session, city_name='UFA')
-        for row in trans_in_ufa_rows:
-            self.assertIsNotNone(row)           # запись должна существовать
-            self.assertTrue(row.city == 1)   # идентификатор city_id == 1 (т.е. город UFA в таблице city)
-            self.assertTrue(row.city_name.name == 'UFA')  # проверка связи (relation) по FK
+    obj2 = Objects(
+        uuid=uuid.uuid4(),
+        object_type=Types.gis,
+        props={'prop3': 20, 'prop4': 'test2'},
+        source={'source3': 2, 'source4': 'test2'},
+        created_by=uuid.uuid4(),
+        project_uuid=uuid.uuid4()
+    )
+    db.add(obj2)
 
-    '''def test_delete_weather(self):
-        """ Тест функции удаления записи Weather по наименованию населённого пункта """
-        delete_transformator_by_id(self.session, transformator_id=2)
-        result = get_transformator_by_id(self.session, transformator_id=2)        # ищем запись по идентификатору города UFA
-        self.assertIsNone(result)       # запись не должна существовать
-    '''
+    db.commit()
 
-    # ахах
-    def test_update_hydrogen_by_transformator_id(self):
-        update_hydrogen_by_transformator_number(self.session, transformator_number=2, hydrogen=2)
-        self.assertTrue(get_transformator_by_number(self.session, 2).hydrogen == 2)
+    # добавление связи между объектами
+    rel_obj1_obj2 = RelationObjects(
+        parent_uuid=obj1.uuid,
+        child_uuid=obj2.uuid,
+        relation_type=Relation.link
+    )
+    db.add(rel_obj1_obj2)
 
-    def tearDown(self):
-        """ Наследуемый метод tearDown определяет инструкции,
-            которые должны быть выполнены ПОСЛЕ тестирования """
-        self.session.close()        # закрываем соединение с БД
+    # добавление геометрий
+    geom1 = Geometries(
+        uuid=uuid.uuid4(),
+        geom='POINT(1 2)',
+        object_uuid=obj1.uuid
+    )
+    db.add(geom1)
 
+    geom2 = Geometries(
+        uuid=uuid.uuid4(),
+        geom='POINT(3 4)',
+        object_uuid=obj2.uuid
+    )
+    db.add(geom2)
 
-if __name__ == '__main__':
-    unittest.main()
+    # добавление сеток
+    grid1 = Grids(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom1.uuid,
+        object_uuid=obj1.uuid,
+        inline=1,
+        xline=2
+    )
+    db.add(grid1)
+
+    grid2 = Grids(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom2.uuid,
+        object_uuid=obj2.uuid,
+        inline=3,
+        xline=4
+    )
+    db.add(grid2)
+
+    # добавление поверхностей
+    surf1 = Surfaces(
+        grid_uuid=grid1.uuid,
+        object_uuid=obj1.uuid,
+        value=10.0,
+        level=1
+    )
+    db.add(surf1)
+
+    surf2 = Surfaces(
+        grid_uuid=grid2.uuid,
+        object_uuid=obj2.uuid,
+        value=20.0,
+        level=2
+    )
+    db.add(surf2)
+
+    # добавление данных скважин
+    well_data1 = WellData(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom1.uuid,
+        object_uuid=obj1.uuid,
+        value=30.0,
+        dm=1.0
+    )
+    db.add(well_data1)
+
+    well_data2 = WellData(
+        uuid=uuid.uuid4(),
+        geometry_uuid=geom2.uuid,
+        object_uuid=obj2.uuid,
+        value=40.0,
+        dm=1.0
+    )
+    db.add(well_data2)
+
+    db.commit()
+
+    marker1 = Markers(well_data_uuid=well_data1.uuid, object_uuid=obj1.uuid, name='marker_1', dm=100.0)
+    marker2 = Markers(well_data_uuid=well_data2.uuid, object_uuid=obj2.uuid, name='marker_2', dm=200.0)
+    db.add_all([marker1, marker2])
+
+    # создаем записи в таблице signals
+    signal1 = Signals(object_uuid=obj1.uuid, value=1.0)
+    signal2 = Signals(object_uuid=obj2.uuid, value=2.0)
+    db.add_all([signal1, signal2])
+    return True
+
