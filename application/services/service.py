@@ -8,5 +8,5 @@ class ObjectService:
             self.dao = ObjectDAO(session)
 
     def create_object(self, obj: ObjectsDTO):
-        result = self.dao.create(obj.object_type, obj.props)
+        result = self.dao.create(obj.object_type, obj.props, obj.source, obj.created_by, obj.project_uuid )
         return result
