@@ -1,4 +1,5 @@
 from application.services.service import ObjectService
+from application.models.dto.objects_dto import ObjectsDTO
 
 class ObjectController:
     def __init__(self):
